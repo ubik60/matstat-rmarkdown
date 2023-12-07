@@ -1,0 +1,89 @@
+---
+title: "Några standardfördelningar"
+author: "Anders Johansson"
+date: '2021-10-12'
+output:
+  bookdown::gitbook: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, echo = FALSE, message=FALSE}
+# Följande kod importerar bland annat funktioner och definitioner från paketet `tidyverse`. 
+# Skapar också en egen funktion `kbl(data)` som ger snyggare utskrift av tabeller. 
+knitr::opts_chunk$set(echo = TRUE,message = TRUE)
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+# ggplot light theme
+theme_set(theme_light()) 
+# utskrift av tabeller
+pr <- function(df)  { kable(df) %>% kable_styling("striped",full_width=FALSE,position="center") }
+```
+
+# Standardfördelningar
+
+## Univariata fördelningar
+
+RV            PMF/PDF                                      Utfall                   Väntevärde          Varians                R Root 
+----          ---------                                    -------                  ------              ----------             --------
+Bin$(n,p)$    ${{n}\choose {x}} p^x(1 - p)^{n - x}$        $0\le x \le n$           $np$                $np(1 - p)$            `binom`
+Geo$(p)$      $p(1-p)^{x-1}$                               $x \ge 1$                $\frac{1-p}{p}$     $\frac{1-p}{p^2}$      `geom`
+NegBin$(r,p)$ $\binom{x-1}{r-1} (1-p)^{x-r} p^r$           $x \ge 1$                ${r(1-p)}/{p}$      ${r(1-p)}/{p^2}$       `nbinom`
+Po$(\lambda)$ $\frac {1}{x!} \lambda^x e^{-\lambda}$       $x \ge 0$                $\lambda$           $\lambda$              `pois`
+Uniform       $\frac{1}{b - a}$                            $a \le x \le b$          $\frac{a + b}{2}$   $\frac{b^2 - a^2}{12}$ `unif`
+Exp$(\lambda)$ $\lambda e^{-\lambda x}$                    $x \ge 0$                $1/\lambda$         $1/\lambda^2$          `exp`
+Normal        $c\cdot e^{(x - \mu)^2/(2\sigma^2)}$         $-\infty < x < \infty$   $\mu$               $\sigma^2$             `norm`
+Gamma         $c\cdot x^{\alpha-1} e^{-\lambda x}$         $x\ge 0$                 $\alpha/\lambda$    $\alpha/{\lambda^2}$   `gamma`
+
+Table: Univariata standardfördelningar
+
+## Negativa binomialfördelningen 
+
+```{r, fig.width=9}
+limits <- 1:30
+nbin <- function(r,p,distr) {
+  distr=sprintf("NegBin(r=%d, p=%.2f)",r,p)
+  x <- r:max(limits)
+  pmf=dnbinom(x-r,size=r,p=p)
+  tibble(distr=distr,r=r,p=p,x=as.character(x),pmf=pmf) 
+}
+
+```
+
+
+```{r, fig.width=9}
+df <- tibble(r=c(1,3,5),p=0.2) %>% 
+  pmap_dfr(nbin)
+
+ggplot(df,aes(x=x,y=pmf,color=distr,fill=distr,position=distr)) +
+  geom_col(position = position_dodge2(width=0.1,padding=0.2,preserve="single")) +
+  scale_x_discrete(limits=as.character(limits)) +
+    labs()
+```
+
+## De kontinuerliga gamma-fördelningarna
+
+
+
+
+```{r, message=F,warning=F}
+dx <- 0.1
+tibble(alpha=c(1,3,5),lambda=c(1,1,2),distr=sprintf("Gamma(%.0f, %.0f)",alpha,lambda),
+  mu=alpha/lambda,sigma=sqrt(alpha/lambda^2)) -> gammodels 
+
+rowwise(gammodels) %>% 
+  summarise(distr=distr,mu=mu,sigma=sigma,x=seq(0,10,by=dx),pdf=dgamma(x,shape=alpha,rate=lambda)) -> gamdf
+gamdf
+```
+
+
+```{r, message=F,warning=F}
+gamdf %>% 
+  ggplot(aes(x=x,y=pdf,color=distr,fill=distr)) +
+    geom_line(show.legend=F) +
+    geom_area(position="identity",alpha=0.1) +
+    geom_vline(data=gammodels,aes(xintercept=mu),linetype=2,width=0.02,show.legend=F) +
+    geom_errorbar(data=gammodels,aes(x=mu,y=-0.05*(1:length(distr)),xmin=mu-sigma,xmax=mu+sigma),width=0.02,show.legend=F)
+    
+```

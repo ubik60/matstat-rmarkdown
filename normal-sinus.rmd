@@ -1,0 +1,83 @@
+---
+title: "En enkel betingad fördelning"
+author: "Anders Johansson"
+date: "2022-10-02"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(flextable)
+theme_set(theme_minimal())
+```
+
+# Betingad fördelning
+
+Här studerar vi en enkel modell med två variabler $(X,Y)$ där $P(X)=\mathrm U[0,6]$ och
+
+$$P(Y|X)=\mathrm N(\mu=6+1.3\cdot \sin(\pi x/2),\sigma=0.4+(3-x)^2).$$
+
+Först samplar vi $n=500$ observationer
+
+```{r sample-sin}
+n <- 500
+
+# Betingat väntevärde och betingad varians (standardavvikelse)
+mf <- function(x) 6+1.3*sin(pi*x/2)
+sdf <- function(x) 0.4+(3-x)^2
+obs <- tibble(
+  X=runif(n,min=0,max=6),
+  Y=rnorm(n,mean=mf(X),sd=sdf(X))
+  )
+
+# Lägg till betingade väntevärdet och residualen
+obsext <- obs %>% mutate(
+  `E(Y|X)`=mf(X),
+  `Y-E(Y|X)`=Y-mf(X)
+  ) 
+  
+
+obsext %>%
+  pivot_longer(cols=c("Y","E(Y|X)","Y-E(Y|X)")) %>% # Lägger alla värden i kolonn `value` med namn i `name`
+  ggplot(aes(x=X,y=value,color=name)) + 
+  geom_point(size=1) + # Scatter plot
+  scale_colour_manual(values=c("Y" = "red","E(Y|X)" = "blue","Y-E(Y|X)" ="black")) + # Val av färger
+  ggtitle("En fördelning av (X,Y) med sinusfunktion som betingat väntevärde av Y") + # 
+  labs(y="Y",color="")
+```
+
+## Uppgifter
+
+1.  Beräkna variansen av $Y$ med hjälp av lagen om total varians. Ni kan använda numerisk integration med kommandot `integrate` om ni vill. Kontrollera genom att jämföra med den skattade varians på de simulerade värdena.\
+
+2.  Genomför en "density-plot" som ger de "empiriska densiteterna" för variablerna $Y$, $E(Y|X)$ och $Y-E(Y|X)$. Använd `ggplot` med `geom_density()`.
+
+3.  Visa med hjälp av tre exempel att variabeln $R=Y-E(Y|X)$ är *okorrelerad* med variabler av typen $W=h(X)$, dvs $\mathrm{Cov}(R,W)=0$. Inför tre nya variabler som funktioner av $X$, exempelvis $X$ , $X^2$ och $\log(X+1)$. Använd simulerade data och skattning av kovariansen med hjälp av `cov(x,y).` Diskutera hur man kan tolka detta faktum i samband med "minsta kvadratmetoden"?
+
+```{r}
+
+```
+
+### Uppgift 1 (lösning)
+
+Observera att vi har $$
+V(Y|X) = (0.4+(3-X)^2)^2\quad\text{och}\quad E(Y|X) = 6+1.3\cdot \sin(\pi X/2).
+$$ Enligt *lagen om total varians* har vi
+
+$$
+V(Y) = E(V(Y|X)) + V(E(Y|X)) = E((0.4+(3-X)^2)^2) + V(6+1.3\cdot \sin(\pi X/2))
+$$ vilket ger $$
+ V(Y) = E((0.4+(3-X)^2)^2) + E((1.3\cdot \sin(\pi X/2))^2) - E(1.3\cdot \sin(\pi X/2))^2
+$$ där väntevärdena $E(\text{uttryck})$ innebär att integrera uttrycken över intervallet $[0,6]$ mot täthetsfunktionen $f(x)=\frac16$.
+
+Vi får
+
+```{r}
+t1 <- integrate(function(x) sdf(x)^2*(1/6),0,6)$value
+t2 <- integrate(function(x) mf(x)^2*(1/6),0,6)$value
+t3 <- integrate(function(x) mf(x)*(1/6),0,6)$value
+t1 + t2 - t3^2
+```
