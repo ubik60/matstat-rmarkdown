@@ -1,6 +1,5 @@
 # matstat-rmarkdown
 
-
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/ubik60/rocker-binder/HEAD)
 
 Generate a Git repository that can run R code with RStudio on
